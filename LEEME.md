@@ -126,3 +126,9 @@ xattr -cr "Barullo FM.vst3" && codesign --force --deep -s - "Barullo FM.vst3"
 - **CPU**: unas 115 veces más rápido que tiempo real con el filtro nuevo, es decir, menos del 1 % de un núcleo.
 - **Estado**: se guardan el sonido, los sonidos editados y el tamaño de la ventana, y se recuperan iguales.
 - **Validación**: pluginval al nivel máximo (10), con pruebas de interfaz. Compila sin avisos con gcc y con clang (el compilador del Mac).
+
+## Licencia
+
+Barullo FM es software libre: se publica bajo la licencia **GNU Affero General Public License v3.0** (archivo `LICENSE`). Puedes usarlo, estudiarlo, modificarlo y compartirlo; si distribuyes una versión modificada, tiene que ir con su código y bajo la misma licencia.
+
+Usa JUCE 8 bajo su licencia AGPLv3. La tipografía Barlow va con su licencia OFL (`Resources/Barlow-OFL.txt`).
