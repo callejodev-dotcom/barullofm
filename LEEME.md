@@ -77,7 +77,7 @@ GitHub compila nas súas propias máquinas. En cada subida comproba que todo com
 Para **publicar unha versión**, sube unha etiqueta:
 
 ```
-git tag v0.4.1 && git push origin v0.4.1
+git tag v0.5.0 && git push origin v0.5.0
 ```
 
 A páxina *Releases* do repositorio énchese soa con:

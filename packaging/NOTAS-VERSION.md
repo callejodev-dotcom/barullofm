@@ -2,6 +2,14 @@
 
 Unha ferramenta de [Escoita](https://www.escoita.link).
 
+## Novidades na 0.5.0
+
+- **Presets propios**: garda todo o que tes (o son, os sons editados e os axustes) cun nome e volve a el cando queiras (botón PRESETS; os ficheiros van en Documentos/Barullo FM/Presets).
+- **A/B**: dous xogos de axustes para comparar; cambiar de lado garda o actual. No menú dos presets, copiar un lado no outro.
+- **Desfacer e refacer**: as frechas da cabeceira desfán os cambios dos mandos e tamén as edicións dos sons (e «Restaurar o orixinal»).
+- O aviso das versións novas vai agora debaixo de ESCOITA.
+- O son non cambia.
+
 ## Novidades na 0.4.1
 
 - **Aviso das versións novas**: unha vez ao día, pregúntase a GitHub cal é a última versión (sen mandar ningún dato) e, se hai unha nova, avísase á beira de ESCOITA. cunha ligazón ás descargas. Co clic dereito en ESCOITA. vese a versión que tes, ábrense as descargas e desactívase o aviso. En Linux, de momento, non avisa (JUCE vai sen curl).
