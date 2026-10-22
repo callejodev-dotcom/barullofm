@@ -69,6 +69,39 @@ static juce::AudioBuffer<float> run (int blockSize, double sr, double seconds, d
     return out;
 }
 
+// roubo de canles e pedal: un son de dúas canles por nota (x2), acordes de doce notas
+// co pedal, para que o reparto teña que roubar; dá unha pegada propia
+static uint64_t pegadaDoRoubo()
+{
+    BarulloProcessor p;
+    const double sr = 48000; const int bs = 256;
+    p.setPlayConfigDetails (0, 2, sr, bs);
+    p.prepareToPlay (sr, bs);
+    p.setCurrentProgram (23);
+    juce::AudioBuffer<float> buf (2, bs);
+    uint64_t h = 1469598103934665603ull;
+    for (int blk = 0; blk < 600; ++blk)
+    {
+        juce::MidiBuffer m;
+        const int f = blk % 100;
+        if (f == 0) m.addEvent (juce::MidiMessage::controllerEvent (1, 64, 127), 0);
+        if (f < 24 && f % 2 == 0) m.addEvent (juce::MidiMessage::noteOn (1, 48 + f + blk / 100, (juce::uint8) (30 + f * 4)), 7 * f);
+        if (f < 24 && f % 2 == 1) m.addEvent (juce::MidiMessage::noteOff (1, 48 + f - 1 + blk / 100), 3);
+        if (f == 40) m.addEvent (juce::MidiMessage::noteOn (1, 50 + blk / 100, (juce::uint8) 90), 11);   // volver tocar unha sostida
+        if (f == 60) m.addEvent (juce::MidiMessage::controllerEvent (1, 64, 0), 5);
+        if (f == 70) m.addEvent (juce::MidiMessage::noteOff (1, 50 + blk / 100), 0);
+        buf.clear(); p.processBlock (buf, m);
+        for (int c = 0; c < 2; ++c)
+            for (int i = 0; i < bs; ++i)
+            {
+                const float x = buf.getSample (c, i);
+                uint32_t u; std::memcpy (&u, &x, 4);
+                for (int b = 0; b < 4; ++b) { h ^= (u >> (8 * b)) & 0xFF; h *= 1099511628211ull; }
+            }
+    }
+    return h;
+}
+
 static void snapshot (const juce::File& png, int voice, int page)
 {
     BarulloProcessor p;
@@ -161,6 +194,7 @@ int main (int argc, char** argv)
             }
         std::printf ("pegada da saída: %016llx\n", (unsigned long long) h);
     }
+    std::printf ("pegada do roubo (acordes de doce notas co pedal): %016llx\n", (unsigned long long) pegadaDoRoubo());
 
     const juce::File f (argc > 1 ? juce::String (argv[1]) : juce::File::getCurrentWorkingDirectory().getChildFile ("barullo_test.wav").getFullPathName());
     f.deleteFile();

@@ -13,6 +13,7 @@
 #pragma once
 #include "Chip.h"
 #include "VoiceData.h"
+#include <escoita_nucleo/escoita_nucleo.h>   // o pedal de sostemento e o reparto de voces, do núcleo común
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -26,7 +27,15 @@ using Patch = std::array<Part, 2>;
 class Synth
 {
 public:
-    Synth() { for (int v = 0; v < NUM_VOICES; ++v) user[(size_t) v] = { VOICES[v].parts[0], VOICES[v].parts[1] }; reset(); }
+    Synth()
+    {
+        for (int v = 0; v < NUM_VOICES; ++v) user[(size_t) v] = { VOICES[v].parts[0], VOICES[v].parts[1] };
+        sost.empezar = [this] (int n, int vel) { noteOn (n, vel); };
+        sost.acabar = [this] (int n) { noteOff (n); };
+        reset();
+    }
+    Synth (const Synth&) = delete;   // o pedal chama a este obxecto: non se copia
+    Synth& operator= (const Synth&) = delete;
 
     void prepare (double sampleRate)
     {
@@ -44,7 +53,7 @@ public:
         for (auto& c : chans) c = ChanState{};
         for (auto& h : held) h = Held{};
         for (auto& f : films) f = Film{};
-        physDown.fill (false); sustained.fill (false); pedal = false;
+        sost.reiniciar();
         clock = 0; fidSeq = 0; stamp = 1; now = 0; nextVib = 0; vibWasOn = false;
         cur = user[(size_t) voice];
     }
@@ -99,29 +108,14 @@ public:
     }
 
     // ---- MIDI ----
-    void midiNoteOn (int n, int vel = 127)
-    {
-        if (n < 0 || n > 127) return;
-        if (sustained[(size_t) n]) { sustained[(size_t) n] = false; noteOff (n); }
-        physDown[(size_t) n] = true;
-        noteOn (n, vel);
-    }
-    void midiNoteOff (int n)
-    {
-        if (n < 0 || n > 127) return;
-        physDown[(size_t) n] = false;
-        if (pedal) sustained[(size_t) n] = true; else noteOff (n);
-    }
-    void midiSustain (bool down)
-    {
-        pedal = down;
-        if (! down)
-            for (int n = 0; n < 128; ++n)
-                if (sustained[(size_t) n]) { sustained[(size_t) n] = false; if (! physDown[(size_t) n]) noteOff (n); }
-    }
+    // o pedal de sostemento vai polo núcleo común (escoita::Sostido): o motor só ve as notas
+    // que empezan e as que acaban de verdade
+    void midiNoteOn (int n, int vel = 127) { sost.noteOn (n, vel); }
+    void midiNoteOff (int n) { sost.noteOff (n); }
+    void midiSustain (bool down) { sost.pedal (down); }
     void allNotesOff()
     {
-        sustained.fill (false); physDown.fill (false); pedal = false;
+        sost.reiniciar();
         for (int n = 0; n < 128; ++n) if (held[(size_t) n].on) noteOff (n);
     }
     // valor de la rueda de bend en −1..+1
@@ -198,14 +192,14 @@ private:
     double sr = 48000.0;
     int voice = 0, stamp = 1, fidSeq = 0;
     uint32_t clock = 0;
-    bool filmsOn = true, pedal = false;
+    bool filmsOn = true;
     std::array<int, 256 * MAXCHIPS> shadow {};
     std::array<ChanState, MAXCH> chans {};
     int numCh = 8;
     std::vector<float> tmpL, tmpR;
     std::array<Held, 128> held {};
     std::array<Film, 64> films {};
-    std::array<bool, 128> physDown {}, sustained {};
+    escoita::Sostido sost;
     std::array<Patch, NUM_VOICES> user {};
     Patch cur {};
     double bend = 0, bendRange = 2, mod = 0, velSens = 0;
@@ -346,19 +340,12 @@ private:
         {
             partRegs (v, pi, useInit, regs[pi], g7s[pi]);
             const int* p = regs[pi]; const int g7 = g7s[pi];
-            int best = -1;
-            for (int c = 0; c < numCh; ++c)
-            {
-                bool taken = false;
-                for (int u = 0; u < h.nUsed; ++u) if (h.used[u] == c) taken = true;
-                if (taken) continue;
-                if (best < 0) { best = c; continue; }
-                const auto& a = chans[(size_t) c]; const auto& b = chans[(size_t) best];
-                const bool aFree = a.note < 0, bFree = b.note < 0;
-                if (aFree != bFree) { if (aFree) best = c; }
-                else if (a.t < b.t) best = c;
-            }
-            const int c = best; h.used[h.nUsed++] = c;
+            // a canle: a libre que leva máis tempo libre, se non a que leva máis tempo tocando
+            // (o reparto do núcleo común); nunca unha que xa use esta nota
+            const int c = escoita::escollerVoz (numCh,
+                [this] (int k) { const auto& ch = chans[(size_t) k]; return escoita::EstadoVoz { ch.note < 0, ch.t }; },
+                [&h] (int k) { for (int u = 0; u < h.nUsed; ++u) if (h.used[u] == k) return true; return false; });
+            h.used[h.nUsed++] = c;
             auto& ch = chans[(size_t) c];
             if (ch.note >= 0) wr (c, 1, 1, rd (c, 1, 1) & 0x7F);
             ch.velOff = velOff;

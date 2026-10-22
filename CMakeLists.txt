@@ -116,4 +116,16 @@ if(BARULLO_TESTS)
   target_link_libraries(BarulloRenderTest PRIVATE BarulloFonts juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_formats
     PUBLIC juce::juce_recommended_config_flags)
   escoita_produto(BarulloRenderTest NOME "Barullo FM" VERSION ${PROJECT_VERSION} REPO callejodev-dotcom/barullofm PROBA)
+
+  # Comparación co emulador web: toca un seq.txt co firmware e garda as escrituras ao chip e o
+  # audio (o motor usa o pedal e o reparto de voces do núcleo, así que vai con JUCE)
+  juce_add_console_app(BarulloSeqTest PRODUCT_NAME "BarulloSeqTest")
+  target_sources(BarulloSeqTest PRIVATE tools/seqtest.cpp)
+  target_include_directories(BarulloSeqTest PRIVATE Source)
+  if(MSVC)
+    target_compile_options(BarulloSeqTest PRIVATE /utf-8 /bigobj)
+  endif()
+  target_compile_definitions(BarulloSeqTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(BarulloSeqTest PRIVATE juce::juce_core PUBLIC juce::juce_recommended_config_flags)
+  escoita_produto(BarulloSeqTest NOME "Barullo FM" VERSION ${PROJECT_VERSION} REPO callejodev-dotcom/barullofm PROBA)
 endif()
