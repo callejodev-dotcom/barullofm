@@ -21,13 +21,6 @@ juce::Font body (float s) { return juce::Font (juce::FontOptions (tf (0)).withHe
 juce::Font bold (float s) { return juce::Font (juce::FontOptions (tf (1)).withHeight (s)); }
 juce::Font cond (float s) { return juce::Font (juce::FontOptions (tf (2)).withHeight (s)); }
 
-// mayúsculas también para las vocales con tilde y la ñ
-static juce::String upper (const juce::String& s)
-{
-    return s.toUpperCase().replace (U ("á"), U ("Á")).replace (U ("é"), U ("É")).replace (U ("í"), U ("Í"))
-            .replace (U ("ó"), U ("Ó")).replace (U ("ú"), U ("Ú")).replace (U ("ñ"), U ("Ñ"));
-}
-
 // rótulo impreso en el panel: seminegrita, espaciado
 void printed (juce::Graphics& g, const juce::String& t, juce::Rectangle<float> r, float size, juce::Colour c, juce::Justification j, float tracking)
 {
@@ -108,7 +101,7 @@ void Look::drawButtonText (juce::Graphics& g, juce::TextButton& b, bool, bool do
         return;
     }
     if ((bool) b.getProperties()["led"]) r.removeFromLeft (18);
-    printed (g, upper (b.getButtonText()), r.reduced (6, 0).toFloat(), 13.0f, ink.withAlpha (b.isEnabled() ? 1.0f : 0.4f), juce::Justification::centred, 0.06f);
+    printed (g, escoita::maiusculas (b.getButtonText()), r.reduced (6, 0).toFloat(), 13.0f, ink.withAlpha (b.isEnabled() ? 1.0f : 0.4f), juce::Justification::centred, 0.06f);
 }
 
 void Look::drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h, float pos, float a0, float a1, juce::Slider&)
@@ -215,7 +208,7 @@ void VoiceButton::paintButton (juce::Graphics& g, bool over, bool down)
         g.fillEllipse (r.getRight() - 8.0f, r.getY() + 4.0f, 5.0f, 5.0f);
     }
     // nombre: una línea si cabe; si no, dos, partidas por la última palabra (letra estrecha, como el panel)
-    const auto name = upper (BarulloProcessor::voiceName (index));
+    const auto name = escoita::maiusculas (BarulloProcessor::voiceName (index));
     const auto f1 = juce::Font (juce::FontOptions (tf (0)).withHeight (12.5f).withKerningFactor (0.03f));
     const auto f2 = juce::Font (juce::FontOptions (tf (2)).withHeight (12.5f).withKerningFactor (0.02f));
     g.setColour (selected ? juce::Colours::white : col::print);
@@ -792,7 +785,7 @@ MainView::MainView (BarulloProcessor& p)
     escoita.setWantsKeyboardFocus (false);
     addAndMakeVisible (escoita);
     escoita.onMenu = [this] { showEscoitaMenu(); };
-    updateBtn.onClick = [] { juce::URL (actualizacions::downloadsUrl()).launchInDefaultBrowser(); };
+    updateBtn.onClick = [] { juce::URL (escoita::Actualizacions::downloadsUrl()).launchInDefaultBrowser(); };
     addChildComponent (updateBtn);
     refreshUpdate();
 
@@ -809,16 +802,16 @@ void MainView::refreshUpdate()
     if (v == updateBtn.version && updateBtn.isVisible() == v.isNotEmpty()) return;
     updateBtn.version = v;
     updateBtn.setTitle (U ("Hai unha versión nova: ") + v);
-    updateBtn.setTooltip (U ("Tes a ") + BARULLO_VERSION + U (". Abre a páxina de descargas para baixar a ") + v + ".");
+    updateBtn.setTooltip (U ("Tes a ") + ESCOITA_VERSION + U (". Abre a páxina de descargas para baixar a ") + v + ".");
     updateBtn.setVisible (v.isNotEmpty());
 }
 
 void MainView::showEscoitaMenu()
 {
     juce::PopupMenu m;
-    m.addSectionHeader (U ("Barullo FM ") + BARULLO_VERSION);
+    m.addSectionHeader (U ("Barullo FM ") + ESCOITA_VERSION);
     m.addItem (U ("Abrir escoita.link"), [] { juce::URL ("https://www.escoita.link").launchInDefaultBrowser(); });
-    m.addItem (U ("Descargas e versións"), [] { juce::URL (actualizacions::downloadsUrl()).launchInDefaultBrowser(); });
+    m.addItem (U ("Descargas e versións"), [] { juce::URL (escoita::Actualizacions::downloadsUrl()).launchInDefaultBrowser(); });
     m.addSeparator();
     m.addItem (U ("Avisar das versións novas"), true, updates->enabled(), [sp = juce::Component::SafePointer<MainView> (this)]
     {
@@ -938,7 +931,7 @@ void MainView::paintDisplay (juce::Graphics& g, juce::Rectangle<int> area)
     drawSevenSeg (g, d1.translated (dw + 12.0f, 0), v % 10);
     in.removeFromLeft (14.0f);
 
-    const auto name = upper (BarulloProcessor::voiceName (v));
+    const auto name = escoita::maiusculas (BarulloProcessor::voiceName (v));
     auto nameR = in.removeFromTop (40.0f);
     g.setFont (juce::Font (juce::FontOptions (tf (2)).withHeight (36.0f).withKerningFactor (0.03f)));
     g.setColour (col::led.withAlpha (0.14f));

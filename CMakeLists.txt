@@ -24,6 +24,21 @@ else()
   FetchContent_MakeAvailable(JUCE)
 endif()
 
+# Núcleo común de Escoita: a versión fixada ou, se existe, a carpeta irmá ../escoita-nucleo
+# (para traballar no núcleo e probalo nos plugins á vez); tamén -DESCOITA_NUCLEO=<carpeta>
+set(ESCOITA_NUCLEO_VERSION "v0.1.0")
+if(NOT ESCOITA_NUCLEO AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../escoita-nucleo/escoita_nucleo")
+  set(ESCOITA_NUCLEO "${CMAKE_CURRENT_SOURCE_DIR}/../escoita-nucleo")
+endif()
+if(ESCOITA_NUCLEO)
+  add_subdirectory("${ESCOITA_NUCLEO}" escoita-nucleo)
+else()
+  include(FetchContent)
+  FetchContent_Declare(escoita_nucleo GIT_REPOSITORY https://github.com/callejodev-dotcom/escoita-nucleo.git
+                       GIT_TAG ${ESCOITA_NUCLEO_VERSION} GIT_SHALLOW TRUE)
+  FetchContent_MakeAvailable(escoita_nucleo)
+endif()
+
 # Formatos por sistema: Mac → AU, VST3 y app; Windows → VST3 y app; Linux → VST3, LV2 y app
 if(APPLE)
   set(FORMATS AU VST3 Standalone)
@@ -62,8 +77,7 @@ juce_add_binary_data(BarulloFonts SOURCES
 
 target_sources(BarulloFM PRIVATE
   Source/PluginProcessor.cpp
-  Source/PluginEditor.cpp
-  Source/Actualizacions.cpp)
+  Source/PluginEditor.cpp)
 
 target_include_directories(BarulloFM PRIVATE Source)
 
@@ -73,7 +87,6 @@ if(MSVC)
 endif()
 
 target_compile_definitions(BarulloFM PUBLIC
-  BARULLO_VERSION="${PROJECT_VERSION}"
   JUCE_WEB_BROWSER=0
   JUCE_USE_CURL=0
   JUCE_VST3_CAN_REPLACE_VST2=0
@@ -88,17 +101,19 @@ target_link_libraries(BarulloFM
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags)
+escoita_produto(BarulloFM NOME "Barullo FM" VERSION ${PROJECT_VERSION} REPO callejodev-dotcom/barullofm)
 
 # Prueba sin interfaz: toca unas notas por el procesador y guarda un WAV
 option(BARULLO_TESTS "Compilar la prueba de render" OFF)
 if(BARULLO_TESTS)
   juce_add_console_app(BarulloRenderTest PRODUCT_NAME "BarulloRenderTest")
-  target_sources(BarulloRenderTest PRIVATE tools/RenderTest.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp Source/Actualizacions.cpp)
+  target_sources(BarulloRenderTest PRIVATE tools/RenderTest.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp)
   target_include_directories(BarulloRenderTest PRIVATE Source)
   if(MSVC)
     target_compile_options(BarulloRenderTest PRIVATE /utf-8 /bigobj)
   endif()
-  target_compile_definitions(BarulloRenderTest PRIVATE BARULLO_VERSION="${PROJECT_VERSION}" JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 BARULLO_NO_PLUGIN_ENTRY=1)
+  target_compile_definitions(BarulloRenderTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 BARULLO_NO_PLUGIN_ENTRY=1)
   target_link_libraries(BarulloRenderTest PRIVATE BarulloFonts juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_formats
     PUBLIC juce::juce_recommended_config_flags)
+  escoita_produto(BarulloRenderTest NOME "Barullo FM" VERSION ${PROJECT_VERSION} REPO callejodev-dotcom/barullofm PROBA)
 endif()

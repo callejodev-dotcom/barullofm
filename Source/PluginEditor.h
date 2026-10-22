@@ -1,7 +1,7 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "PluginProcessor.h"
-#include "Actualizacions.h"
+#include <escoita_nucleo/escoita_nucleo.h>
 
 namespace ui
 {
@@ -170,7 +170,7 @@ namespace ui
         juce::TextButton filmsBtn, speakerBtn, unlimitedBtn, eqSpeaker, eqFlat;
         EscoitaLink escoita;
         UpdateButton updateBtn;
-        juce::SharedResourcePointer<actualizacions::Checker> updates;
+        juce::SharedResourcePointer<escoita::Actualizacions> updates;
         int updateTick = 0;
         void refreshUpdate();
         void showEscoitaMenu();

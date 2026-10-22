@@ -118,8 +118,8 @@ xattr -cr "Barullo FM.vst3" && codesign --force --deep -s - "Barullo FM.vst3"
 | `Source/Fx.h` | Filtro de salida, ecualizador (mismas fórmulas que el navegador), compensación, saturación y limitador sin anticipación |
 | `Source/VoiceData.h` | Los 100 sonidos, las 36 741 escrituras de las películas y las caídas, exportadas del emulador web por `tools/export_data.js` |
 | `Source/Plugin*.cpp` | El plugin JUCE y la interfaz |
-| `Source/Actualizacions.cpp` | O aviso das versións novas (unha pregunta ao día a GitHub, nun fío aparte) |
-| `packaging/` | Instaladores: `package_mac.sh` (.pkg universal), `windows.iss` (Inno Setup), `package_linux.sh` (.tar.gz) |
+| `packaging/` | Os datos do produto (`produto.env`), os LEEME dos instaladores e as notas da versión; os instaladores e a CI son do núcleo común, [escoita-nucleo](https://github.com/callejodev-dotcom/escoita-nucleo) (versión fixada en `CMakeLists.txt`, `ESCOITA_NUCLEO_VERSION`, e en `.github/workflows/build.yml`) |
+| `tools/probas-ci.sh` | As probas que pasa a CI en cada sistema |
 | `tools/RenderTest.cpp` | Prueba sin interfaz: con bloques de 512 y de 37 muestras el resultado tiene que ser idéntico |
 
 ## Pruebas hechas
