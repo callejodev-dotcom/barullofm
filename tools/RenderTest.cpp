@@ -2,6 +2,7 @@
 // comprueba que el resultado es idéntico (todo va a la muestra exacta), mide el coste
 // y guarda un WAV para escuchar.
 #include <juce_audio_formats/juce_audio_formats.h>
+#include <cstring>
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
@@ -146,6 +147,20 @@ int main (int argc, char** argv)
     std::printf ("bloque 512: %.3f s de CPU para %.0f s de audio (%.0fx tiempo real)\n", c1, seconds, seconds / c1);
     std::printf ("bloque 37:  %.3f s de CPU (%.0fx tiempo real)\n", c2, seconds / c2);
     std::printf ("diferencia maxima entre tamanos de bloque: %g   pico: %.3f\n", maxDiff, peak);
+
+    // a pegada da saída (FNV-1a de 64 bits sobre as mostras): un cambio de organización
+    // no motor non pode cambiala nin nun bit
+    {
+        uint64_t h = 1469598103934665603ull;
+        for (int c = 0; c < 2; ++c)
+            for (int i = 0; i < a.getNumSamples(); ++i)
+            {
+                const float x = a.getSample (c, i);
+                uint32_t u; std::memcpy (&u, &x, 4);
+                for (int b = 0; b < 4; ++b) { h ^= (u >> (8 * b)) & 0xFF; h *= 1099511628211ull; }
+            }
+        std::printf ("pegada da saída: %016llx\n", (unsigned long long) h);
+    }
 
     const juce::File f (argc > 1 ? juce::String (argv[1]) : juce::File::getCurrentWorkingDirectory().getChildFile ("barullo_test.wav").getFullPathName());
     f.deleteFile();
