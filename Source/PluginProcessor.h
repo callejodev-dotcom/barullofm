@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <escoita_nucleo/escoita_nucleo.h>
 #include "Synth.h"
 #include "Fx.h"
 
@@ -40,7 +41,11 @@ public:
     static juce::String voiceDesc (int i);
     static int voiceParts (int i);
 
+    juce::UndoManager undo;   // desfacer e refacer (declárase antes ca o apvts)
     juce::AudioProcessorValueTreeState apvts;
+    // presets propios (.bfmpreset en Documentos/Barullo FM/Presets), A/B e desfacer: do núcleo
+    // común; levan os parámetros e os sons editados
+    escoita::Estado estado { apvts, &undo, opcionsEstado() };
     juce::MidiKeyboardState keyboardState;
 
     // Para la pantalla: qué canales del chip suenan (bit por canal)
@@ -56,6 +61,12 @@ public:
     bool isEdited (int v) const;
     void setPatchReg (int v, int part, int k, int value);
     void resetPatch (int v);
+    // o mesmo, pero que se pode desfacer (o que fai a interface)
+    void editPatchReg (int v, int part, int k, int value);
+    void restorePatch (int v);
+    // os sons editados coma ValueTree (<Patches><Patch voice=.. regs=".."/>…), o mesmo do estado gardado
+    juce::ValueTree patchesState() const;
+    void applyPatchesState (const juce::ValueTree&);
     static ym::Patch originalPatch (int v);
     static juce::String patchToString (const ym::Patch&, int nParts);
 
@@ -97,6 +108,8 @@ private:
     int lastEq = -1, lastSpeaker = -1; float lastVolume = -1000.0f;
     int pendingProgram = -1;
 
+    escoita::Estado::Opcions opcionsEstado();
+    void setWholePatch (int v, const ym::Patch&);
     void syncParams();
     void handleMidi (const juce::MidiMessage&);
 

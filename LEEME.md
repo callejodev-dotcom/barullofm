@@ -12,6 +12,14 @@ Instrumento VST3 / AU / app independente co chip FM de 2 operadores emulado rexi
 - **Ecualizador «Altofalante»** (o teu axuste) ou «Plano». Opcionalmente, **saturación de altofalante pequeno**.
 - **MIDI**: notas, pedal de sostemento (CC64), «all notes off» (CC120/123) e **cambio de programa = número de son** (0–99). Os 100 sons tamén aparecen como programas no DAW.
 
+## Novidades (na seguinte versión)
+
+- **Presets propios**: a tecla PRESETS garda e carga o estado enteiro (o son escollido, os sons editados e os axustes) en ficheiros `.bfmpreset`, en Documentos/Barullo FM/Presets. No mesmo menú: abrir a carpeta e copiar entre A e B.
+- **A/B**: dous xogos de axustes para comparar, cos sons editados incluídos. Cambiar de lado garda o actual.
+- **Desfacer e refacer** (as frechas da cabeceira): os axustes e tamén as edicións dos sons e «Restaurar o orixinal». Cada clic é un paso.
+- Os tres veñen do núcleo común de Escoita, igual ca en Barullo Tune; tamén o pedal de sostemento, a escolla da canle e o limitador de seguridade, sen cambiar o son nin nun bit.
+- O aviso das versións novas vai agora debaixo de ESCOITA.
+
 ## Novidades (versión 0.4.1)
 
 - **Aviso das versións novas**: unha vez ao día, pregúntase a GitHub cal é a última versión (sen mandar ningún dato) e, se hai unha nova, avísase á beira de ESCOITA. cunha ligazón ás descargas. Co clic dereito en ESCOITA. vese a versión que tes, ábrense as descargas e desactívase o aviso. En Linux, de momento, non avisa (JUCE vai sen curl).
@@ -114,13 +122,14 @@ xattr -cr "Barullo FM.vst3" && codesign --force --deep -s - "Barullo FM.vst3"
 |---|---|
 | `Source/Chip.h` | O chip: fases de 19 bits, seno logarítmico + táboa exponencial, envolvente de 9 bits, realimentación, media onda; corre a reloxo/64 |
 | `Source/Resampler.h` | Paso á frecuencia do DAW sen aliasing (filtro de fase mínima, deséñase ao arrancar) |
-| `Source/Synth.h` | O «firmware»: reparto de canles, carga de sons, películas, caída ao soltar, pedal |
-| `Source/Fx.h` | Filtro de saída, ecualizador (as mesmas fórmulas ca o navegador), compensación, saturación e limitador sen anticipación |
+| `Source/Synth.h` | O «firmware»: reparto de canles, carga de sons, películas, caída ao soltar, pedal (o pedal e a escolla da canle, do núcleo común) |
+| `Source/Fx.h` | Filtro de saída, ecualizador (as mesmas fórmulas ca o navegador), compensación, saturación e limitador sen anticipación (o teito a −1 dBFS, do núcleo común) |
 | `Source/VoiceData.h` | Os 100 sons, as 36 741 escrituras das películas e as caídas, exportadas do emulador web por `tools/export_data.js` |
 | `Source/Plugin*.cpp` | O plugin JUCE e a interface |
 | `packaging/` | Os datos do produto (`produto.env`), os LEEME dos instaladores e as notas da versión; os instaladores e a CI son do núcleo común, [escoita-nucleo](https://github.com/callejodev-dotcom/escoita-nucleo) (versión fixada en `CMakeLists.txt`, `ESCOITA_NUCLEO_VERSION`, e en `.github/workflows/build.yml`) |
 | `tools/probas-ci.sh` | As probas que pasa a CI en cada sistema |
-| `tools/RenderTest.cpp` | Proba sen interface: con bloques de 512 e de 37 mostras o resultado ten que ser idéntico |
+| `tools/RenderTest.cpp` | Proba sen interface: con bloques de 512 e de 37 mostras o resultado ten que ser idéntico; imprime a **pegada da saída** (un cambio de organización non pode cambiala nin nun bit); A/B, presets e desfacer |
+| `tools/seqtest.cpp` | Toca un `seq.txt` co firmware e garda as escrituras ao chip e o audio, para comparar co emulador web (`BarulloSeqTest`) |
 
 ## Probas feitas
 
@@ -130,6 +139,8 @@ xattr -cr "Barullo FM.vst3" && codesign --force --deep -s - "Barullo FM.vst3"
 - **Bloques**: con bloques de 512 e de 37 mostras a saída é idéntica.
 - **CPU**: unhas 115 veces máis rápido ca tempo real co filtro novo, é dicir, menos do 1 % dun núcleo.
 - **Estado**: gárdanse o son, os sons editados e o tamaño da xanela, e recupéranse iguais.
+- **A/B, presets e desfacer**: cada lado garda os seus axustes e sons editados; un preset gárdase e cárgase igual; desfacer e refacer un axuste, unha edición e «Restaurar o orixinal».
+- **Pegada da saída** (`34c2be491b7c4300`) e **pegada do roubo** (acordes de doce notas dun son ×2 co pedal, `d69b1075164b256b`): iguais antes e despois de levar o pedal, a escolla da canle e o limitador ao núcleo común.
 - **Validación**: pluginval ao nivel máximo (10), con probas de interface. Compila sen avisos con gcc e con clang (o compilador do Mac).
 
 ## Licenza

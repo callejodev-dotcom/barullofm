@@ -100,6 +100,19 @@ void Look::drawButtonText (juce::Graphics& g, juce::TextButton& b, bool, bool do
         g.setColour (ink); g.fillPath (t);
         return;
     }
+    const int curve = b.getProperties()["curve"];   // desfacer (−1) e refacer (+1): unha frecha en arco
+    if (curve != 0)
+    {
+        const auto c = r.getCentre().toFloat(); const float rad = 6.5f;
+        const float a0 = curve > 0 ? -2.4f : 2.4f, a1 = curve > 0 ? 1.2f : -1.2f;
+        juce::Path arc; arc.addCentredArc (c.x, c.y + 1.0f, rad, rad, 0.0f, a0, a1, true);
+        g.setColour (ink.withAlpha (b.isEnabled() ? 1.0f : 0.35f));
+        g.strokePath (arc, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        const juce::Point<float> tip (c.x + rad * std::sin (a1), c.y + 1.0f - rad * std::cos (a1));
+        juce::Path head; head.addTriangle (tip.x + (float) curve * 4.5f, tip.y, tip.x - (float) curve * 1.5f, tip.y - 4.5f, tip.x - (float) curve * 1.5f, tip.y + 4.5f);
+        g.fillPath (head);
+        return;
+    }
     if ((bool) b.getProperties()["led"]) r.removeFromLeft (18);
     printed (g, escoita::maiusculas (b.getButtonText()), r.reduced (6, 0).toFloat(), 13.0f, ink.withAlpha (b.isEnabled() ? 1.0f : 0.4f), juce::Justification::centred, 0.06f);
 }
@@ -318,7 +331,7 @@ PatchEditor::PatchEditor (BarulloProcessor& p) : proc (p)
     partB.onClick = [this] { part = 1; refresh(); };
     resetBtn.setButtonText ("Restaurar o orixinal");
     resetBtn.getProperties().set ("tint", "cream");
-    resetBtn.onClick = [this] { proc.resetPatch (proc.currentVoice()); refresh(); };
+    resetBtn.onClick = [this] { proc.restorePatch (proc.currentVoice()); refresh(); };
     chipBtn.setButtonText ("Ver no chip");
     chipBtn.setTooltip (U ("Como quedan estes valores dentro da memoria do chip, en directo."));
     chipBtn.onClick = [this] { if (onShowChip) onShowChip(); };
@@ -337,7 +350,7 @@ void PatchEditor::setBits (int k, int sh, int m, int val)
 {
     const int v = proc.currentVoice();
     const int old = proc.getPatch (v)[(size_t) part].r[k];
-    proc.setPatchReg (v, part, k, (old & ~(m << sh)) | ((val & m) << sh));
+    proc.editPatchReg (v, part, k, (old & ~(m << sh)) | ((val & m) << sh));   // (pódese desfacer)
     hex.setText (BarulloProcessor::patchToString (proc.getPatch (v), BarulloProcessor::voiceParts (v)), juce::dontSendNotification);
     resetBtn.setEnabled (proc.isEdited (v));
 }
@@ -346,7 +359,7 @@ void PatchEditor::setG7 (int sh, int m, int val)
 {
     const int v = proc.currentVoice();
     const int old = proc.getPatch (v)[(size_t) part].g7;
-    proc.setPatchReg (v, part, 16, (old & ~(m << sh)) | ((val & m) << sh));
+    proc.editPatchReg (v, part, 16, (old & ~(m << sh)) | ((val & m) << sh));
     hex.setText (BarulloProcessor::patchToString (proc.getPatch (v), BarulloProcessor::voiceParts (v)), juce::dontSendNotification);
     resetBtn.setEnabled (proc.isEdited (v));
 }
@@ -724,6 +737,26 @@ MainView::MainView (BarulloProcessor& p)
     eqSpeaker.setButtonText ("Altofalante"); eqFlat.setButtonText ("Plano");
     unlimitedBtn.setButtonText (U ("Sen límite"));
     for (auto* b : { &filmsBtn, &speakerBtn, &unlimitedBtn, &eqSpeaker, &eqFlat }) { ledButton (b); addAndMakeVisible (b); }
+
+    // presets propios, A/B e desfacer
+    presetsBtn.setButtonText ("Presets");
+    presetsBtn.setTooltip (U ("Os teus presets: gardan todo (o son escollido, os sons editados e os axustes). Aquí tamén: gardar o actual, abrir a carpeta e copiar entre A e B."));
+    presetsBtn.onClick = [this] { showPresetsMenu(); };
+    for (int i = 0; i < 2; ++i)
+    {
+        abBtn[i].setButtonText (i == 0 ? "A" : "B");
+        ledButton (&abBtn[i]);
+        abBtn[i].setTooltip (U ("A/B: dous xogos de axustes para comparar. Cambiar de lado garda o actual. Para copiar un lado no outro, no menú dos presets."));
+        abBtn[i].onClick = [this, i] { if (i != proc.estado.lado()) { proc.estado.cambiarLado(); afterStateChange(); } };
+    }
+    undoBtn.getProperties().set ("curve", -1); redoBtn.getProperties().set ("curve", 1);
+    undoBtn.setTooltip (U ("Desfacer o último cambio (tamén nos sons editados)."));
+    redoBtn.setTooltip (U ("Refacer."));
+    undoBtn.setTitle (U ("Desfacer")); redoBtn.setTitle (U ("Refacer"));
+    undoBtn.onClick = [this] { proc.undo.undo(); afterStateChange(); };
+    redoBtn.onClick = [this] { proc.undo.redo(); afterStateChange(); };
+    for (auto* b : { &presetsBtn, &abBtn[0], &abBtn[1], &undoBtn, &redoBtn }) { b->setWantsKeyboardFocus (false); addAndMakeVisible (b); }
+    juce::Desktop::getInstance().addGlobalMouseListener (this);
     filmsBtn.setClickingTogglesState (true); speakerBtn.setClickingTogglesState (true); unlimitedBtn.setClickingTogglesState (true);
     unlimitedBtn.setTooltip (U ("Apagado: 8 canles, coma o teclado (4 notas cos sons dobres). Acendido: chips virtuais iguais ao orixinal, ata 64 canles, e xa non se corta ningunha nota."));
     filmsBtn.setTooltip (U ("O que o teclado real reescribe no chip mentres soa a nota: vibratos, trémolos, varridos. Apagado: só o son base."));
@@ -834,7 +867,38 @@ void UpdateButton::paintButton (juce::Graphics& g, bool over, bool)
     if (hasKeyboardFocus (false)) { g.setColour (col::amber); g.drawRoundedRectangle (r.reduced (1.0f), 4.0f, 1.2f); }
 }
 
-MainView::~MainView() { setLookAndFeel (nullptr); }
+MainView::~MainView()
+{
+    juce::Desktop::getInstance().removeGlobalMouseListener (this);
+    setLookAndFeel (nullptr);
+}
+
+// cada clic (en calquera mando) empeza un paso novo de desfacer
+void MainView::mouseDown (const juce::MouseEvent&) { proc.estado.novoPaso(); }
+
+void MainView::showPresetsMenu()
+{
+    juce::PopupMenu m;
+    proc.estado.engadirAoMenu (m, [sp = juce::Component::SafePointer<MainView> (this)] { if (sp != nullptr) sp->afterStateChange(); });
+    m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&presetsBtn));
+}
+
+void MainView::afterStateChange()
+{
+    shownVoice = -1; editTick = 15;   // o temporizador volve mirar o son e as marcas de editado
+    if (page == 1) patchEditor.refresh();
+    refreshStateKeys();
+    timerCallback();
+    repaint();
+}
+
+void MainView::refreshStateKeys()
+{
+    for (int i = 0; i < 2; ++i)
+        if (abBtn[i].getToggleState() != (i == proc.estado.lado())) abBtn[i].setToggleState (i == proc.estado.lado(), juce::dontSendNotification);
+    if (undoBtn.isEnabled() != proc.undo.canUndo()) undoBtn.setEnabled (proc.undo.canUndo());
+    if (redoBtn.isEnabled() != proc.undo.canRedo()) redoBtn.setEnabled (proc.undo.canRedo());
+}
 
 void MainView::showPage (int p)
 {
@@ -865,6 +929,7 @@ void MainView::step (int d) { selectVoice ((proc.currentVoice() + d + ym::NUM_VO
 void MainView::timerCallback()
 {
     if (++updateTick >= 60) { updateTick = 0; refreshUpdate(); }
+    refreshStateKeys();
     const int v = proc.currentVoice();
     if (v != shownVoice)
     {
@@ -1036,7 +1101,15 @@ void MainView::paint (juce::Graphics& g)
 void MainView::resized()
 {
     escoita.setBounds (getWidth() - 32 - 160, 22, 160, 30);
-    updateBtn.setBounds (getWidth() - 32 - 160 - 8 - 340, 22, 340, 30);
+    {
+        int x = getWidth() - 32 - 160 - 20 - 288;
+        presetsBtn.setBounds (x, 22, 92, 30); x += 100;
+        abBtn[0].setBounds (x, 22, 48, 30); x += 52;
+        abBtn[1].setBounds (x, 22, 48, 30); x += 60;
+        undoBtn.setBounds (x, 22, 36, 30); x += 40;
+        redoBtn.setBounds (x, 22, 36, 30);
+    }
+    updateBtn.setBounds (getWidth() - 32 - 340, 52, 340, 16);   // debaixo de ESCOITA.
     auto r = getLocalBounds().reduced (32, 0);
     r.removeFromTop (64);
 

@@ -165,6 +165,51 @@ int main (int argc, char** argv)
         std::printf ("versións novas: comparación dos números: %s\n", ok ? "OK" : "FALLO");
         if (! ok) return 2;
     }
+    {   // A/B, presets propios e desfacer (do núcleo común), cos sons editados
+        BarulloProcessor p;
+        auto vol = [&] { return p.apvts.getRawParameterValue ("volume")->load(); };
+        auto setVol = [&] (float v) { auto* r = p.apvts.getParameter ("volume"); r->setValueNotifyingHost (r->convertTo0to1 (v)); };
+        auto reg = [&] (int v) { return (int) p.getPatch (v)[0].r[4]; };
+        setVol (-6.0f); p.editPatchReg (5, 0, 4, 40);
+        p.estado.cambiarLado();                                       // B: copia de A
+        const bool b1 = p.estado.lado() == 1 && std::abs (vol() + 6.0f) < 0.01f && reg (5) == 40;
+        setVol (3.0f); p.editPatchReg (5, 0, 4, 90); p.editPatchReg (7, 0, 4, 11);
+        p.estado.cambiarLado();                                       // A: −6 dB e o son 5 co 40, o 7 sen tocar
+        const bool a1 = p.estado.lado() == 0 && std::abs (vol() + 6.0f) < 0.01f && reg (5) == 40 && ! p.isEdited (7);
+        p.estado.cambiarLado();                                       // B outra vez
+        const bool b2 = std::abs (vol() - 3.0f) < 0.01f && reg (5) == 90 && reg (7) == 11;
+        std::printf ("A/B cos sons editados: %s\n", b1 && a1 && b2 ? "OK" : "FALLO");
+        if (! (b1 && a1 && b2)) return 2;
+
+        const auto dir = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("barullofm_presets_proba");
+        dir.deleteRecursively();
+        p.estado.setCarpeta (dir);
+        const bool saved = p.estado.gardar ("Proba: son 5");
+        setVol (-20.0f); p.restorePatch (5); p.restorePatch (7);
+        const auto list = p.estado.presets();
+        const bool loaded = list.size() == 1 && list[0].hasFileExtension ("bfmpreset") && p.estado.cargar (list[0]);
+        const bool same = std::abs (vol() - 3.0f) < 0.01f && reg (5) == 90 && reg (7) == 11;
+        dir.deleteRecursively();
+        std::printf ("presets propios: %s\n", saved && loaded && same ? "OK" : "FALLO");
+        if (! (saved && loaded && same)) return 2;
+
+        // desfacer: un parámetro e unha edición dun son, cada un no seu paso
+        p.apvts.copyState(); p.estado.novoPaso();
+        setVol (-12.0f); p.apvts.copyState(); p.estado.novoPaso();
+        p.editPatchReg (5, 0, 4, 200); p.estado.novoPaso();
+        p.undo.undo();
+        const bool u1 = reg (5) == 90 && std::abs (vol() + 12.0f) < 0.01f;
+        p.undo.undo();
+        const bool u2 = std::abs (vol() - 3.0f) < 0.01f;
+        p.undo.redo(); p.undo.redo();
+        const bool u3 = reg (5) == 200 && std::abs (vol() + 12.0f) < 0.01f;
+        p.estado.novoPaso(); p.restorePatch (5); p.estado.novoPaso();
+        const bool r1 = ! p.isEdited (5);
+        p.undo.undo();
+        const bool r2 = reg (5) == 200;
+        std::printf ("desfacer e refacer (parámetro, edición e restaurar): %s\n", u1 && u2 && u3 && r1 && r2 ? "OK" : "FALLO");
+        if (! (u1 && u2 && u3 && r1 && r2)) return 2;
+    }
     const double sr = 48000, seconds = 36;
     double c1 = 0, c2 = 0;
     auto a = run (512, sr, seconds, &c1);

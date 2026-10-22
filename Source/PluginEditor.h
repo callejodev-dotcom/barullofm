@@ -136,7 +136,7 @@ namespace ui
         std::function<void()> onMenu;
     };
 
-    // o aviso dunha versión nova, á esquerda de ESCOITA. (unha ligazón á páxina de descargas)
+    // o aviso dunha versión nova, debaixo de ESCOITA. (unha ligazón á páxina de descargas)
     struct UpdateButton : juce::Button
     {
         UpdateButton() : juce::Button ("actualizar") {}
@@ -154,6 +154,7 @@ namespace ui
         void resized() override;
         void timerCallback() override;
         void showPage (int p);
+        void mouseDown (const juce::MouseEvent&) override;   // (global) cada clic, un paso de desfacer
 
     private:
         void selectVoice (int v);
@@ -168,6 +169,11 @@ namespace ui
         juce::TextButton prevBtn, nextBtn, tabSounds, tabEdit, tabChip;
         juce::OwnedArray<VoiceButton> voiceBtns;
         juce::TextButton filmsBtn, speakerBtn, unlimitedBtn, eqSpeaker, eqFlat;
+        // presets propios, A/B e desfacer (do núcleo común)
+        juce::TextButton presetsBtn, abBtn[2], undoBtn, redoBtn;
+        void showPresetsMenu();
+        void afterStateChange();   // despois de desfacer, A/B ou un preset: a interface ao día
+        void refreshStateKeys();
         EscoitaLink escoita;
         UpdateButton updateBtn;
         juce::SharedResourcePointer<escoita::Actualizacions> updates;

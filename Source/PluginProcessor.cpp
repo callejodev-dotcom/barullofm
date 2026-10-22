@@ -3,7 +3,7 @@
 
 BarulloProcessor::BarulloProcessor()
     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "BarulloFM", createLayout())
+      apvts (*this, &undo, "BarulloFM", createLayout())
 {
     voiceParam   = apvts.getRawParameterValue ("voice");
     filmsParam   = apvts.getRawParameterValue ("films");
@@ -83,6 +83,76 @@ void BarulloProcessor::resetPatch (int v)
     if (v < 0 || v >= ym::NUM_VOICES) return;
     patches[(size_t) v] = originalPatch (v);
     pushEdit ({ (int16_t) v, 0, -1, 0 });
+}
+
+// ---- os cambios da interface, que se poden desfacer (o estado do núcleo)
+escoita::Estado::Opcions BarulloProcessor::opcionsEstado()
+{
+    escoita::Estado::Opcions o;
+    o.extension = "bfmpreset";
+    o.extra = [this] { return patchesState(); };
+    o.aplicarExtra = [this] (const juce::ValueTree& t) { applyPatchesState (t); };
+    return o;
+}
+
+void BarulloProcessor::setWholePatch (int v, const ym::Patch& p)
+{
+    for (int pi = 0; pi < 2; ++pi)
+    {
+        for (int k = 2; k <= 13; ++k) setPatchReg (v, pi, k, p[(size_t) pi].r[k]);
+        setPatchReg (v, pi, 16, p[(size_t) pi].g7);
+    }
+}
+
+void BarulloProcessor::editPatchReg (int v, int part, int k, int value)
+{
+    if (v < 0 || v >= ym::NUM_VOICES || part < 0 || part > 1) return;
+    const auto& r = patches[(size_t) v][(size_t) part];
+    const int old = k == 16 ? r.g7 : (k >= 2 && k <= 13 ? r.r[k] : -1);
+    if (old < 0 || old == value) return;
+    estado.cambio ("son", [this, v, part, k, value] { setPatchReg (v, part, k, value); },
+                          [this, v, part, k, old] { setPatchReg (v, part, k, old); });
+}
+
+void BarulloProcessor::restorePatch (int v)
+{
+    if (v < 0 || v >= ym::NUM_VOICES || ! isEdited (v)) return;
+    const auto old = patches[(size_t) v];
+    estado.cambio ("restaurar", [this, v] { resetPatch (v); }, [this, v, old] { setWholePatch (v, old); });
+}
+
+juce::ValueTree BarulloProcessor::patchesState() const
+{
+    juce::ValueTree pt ("Patches");
+    for (int v = 0; v < ym::NUM_VOICES; ++v)
+        if (isEdited (v))
+        {
+            juce::ValueTree e ("Patch");
+            e.setProperty ("voice", v, nullptr);
+            e.setProperty ("regs", patchToString (patches[(size_t) v], voiceParts (v)), nullptr);
+            pt.appendChild (e, nullptr);
+        }
+    return pt;
+}
+
+void BarulloProcessor::applyPatchesState (const juce::ValueTree& pt)
+{
+    // sons: todos ao orixinal e despois os editados
+    for (int v = 0; v < ym::NUM_VOICES; ++v) if (isEdited (v)) resetPatch (v);
+    for (const auto e : pt)
+    {
+        const int v = e.getProperty ("voice", -1);
+        if (v < 0 || v >= ym::NUM_VOICES) continue;
+        for (const auto& tok : juce::StringArray::fromTokens (e.getProperty ("regs").toString(), " ", ""))
+        {
+            const int a = tok.upToFirstOccurrenceOf ("=", false, false).getHexValue32();
+            const int d = tok.fromFirstOccurrenceOf ("=", false, false).getHexValue32() & 0xFF;
+            const int g = a >> 4;
+            if (g == 7) { setPatchReg (v, a & 1, 16, d); continue; }
+            if (g < 1 || g > 6) continue;
+            setPatchReg (v, a & 1, g * 2 + ((a >> 1) & 1), d);
+        }
+    }
 }
 
 // "10=13 12=81 …" como en el emulador web (direcciones del canal 0 / canal 1)
@@ -249,16 +319,7 @@ void BarulloProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto st = apvts.copyState();
     st.removeChild (st.getChildWithName ("Patches"), nullptr);
-    juce::ValueTree pt ("Patches");
-    for (int v = 0; v < ym::NUM_VOICES; ++v)
-        if (isEdited (v))
-        {
-            juce::ValueTree e ("Patch");
-            e.setProperty ("voice", v, nullptr);
-            e.setProperty ("regs", patchToString (patches[(size_t) v], voiceParts (v)), nullptr);
-            pt.appendChild (e, nullptr);
-        }
-    st.appendChild (pt, nullptr);
+    st.appendChild (patchesState(), nullptr);
     st.setProperty ("uiScale", uiScale, nullptr);
     if (auto xml = st.createXml()) copyXmlToBinary (*xml, destData);
 }
@@ -269,22 +330,7 @@ void BarulloProcessor::setStateInformation (const void* data, int sizeInBytes)
     if (! xml || ! xml->hasTagName (apvts.state.getType())) return;
     auto tree = juce::ValueTree::fromXml (*xml);
     uiScale = juce::jlimit (0.6f, 2.0f, (float) tree.getProperty ("uiScale", 1.0f));
-    // sonidos: todos al original y luego los editados
-    for (int v = 0; v < ym::NUM_VOICES; ++v) if (isEdited (v)) resetPatch (v);
-    for (const auto e : tree.getChildWithName ("Patches"))
-    {
-        const int v = e.getProperty ("voice", -1);
-        if (v < 0 || v >= ym::NUM_VOICES) continue;
-        for (const auto& tok : juce::StringArray::fromTokens (e.getProperty ("regs").toString(), " ", ""))
-        {
-            const int a = tok.upToFirstOccurrenceOf ("=", false, false).getHexValue32();
-            const int d = tok.fromFirstOccurrenceOf ("=", false, false).getHexValue32() & 0xFF;
-            const int g = a >> 4;
-            if (g == 7) { setPatchReg (v, a & 1, 16, d); continue; }
-            if (g < 1 || g > 6) continue;
-            setPatchReg (v, a & 1, g * 2 + ((a >> 1) & 1), d);
-        }
-    }
+    applyPatchesState (tree.getChildWithName ("Patches"));
     tree.removeChild (tree.getChildWithName ("Patches"), nullptr);
     apvts.replaceState (tree);
 }
