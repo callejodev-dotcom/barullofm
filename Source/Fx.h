@@ -6,6 +6,7 @@
 #pragma once
 #include <cmath>
 #include <algorithm>
+#include <escoita_nucleo/escoita_nucleo.h>   // o limitador de seguridade (escoita::Teito), do núcleo común
 
 namespace ym {
 
@@ -69,12 +70,12 @@ public:
     double volumeDb   = 0;
     Eq     eq;
 
-    void prepare (double sampleRate) { fs = sampleRate; update(); reset(); }
+    void prepare (double sampleRate) { fs = sampleRate; teito.preparar (fs, 0.080); update(); reset(); }
 
     void reset()
     {
         for (auto* b : { &out1, &out2, &eqH, &eqL, &eqM, &eqT, &spHp, &spPk, &spLp }) b->reset();
-        env = 0; limEnv = 0; volS = volT; makeS = makeT;
+        env = 0; teito.reiniciar(); volS = volT; makeS = makeT;
     }
 
     // Recalcula coeficientes; llamar al cambiar ajustes (no en cada muestra)
@@ -95,7 +96,6 @@ public:
         spPre = 1 + speakerDrive / 12; spK = 1 + speakerDrive / 25; spNorm = 1 / std::tanh (spK);
         // compensación: al encenderla, el volumen queda parecido (medido con piano, órgano, sitar y cuerdas: ±3 dB)
         spComp = 1.7 / (spPre * spK * spNorm);
-        limRel = std::exp (-1 / (0.080 * fs));
         volT = std::pow (10.0, volumeDb / 20);
         atk = std::exp (-1 / (0.002 * fs)); rel = std::exp (-1 / (0.150 * fs));
         smooth = 1 - std::exp (-1 / (0.02 * fs));
@@ -137,10 +137,8 @@ public:
             env = pk + (env - pk) * coef;
             const double g = gainFor (env) * MAKEUP;
             l *= g; r *= g;
-            // limitador de seguridad: techo a −1 dBFS, ataque instantáneo (nunca se pasa), sin anticipación
-            const double p2 = std::max (std::abs (l), std::abs (r));
-            limEnv = std::max (p2, limEnv * limRel);
-            if (limEnv > CEIL) { const double lg = CEIL / limEnv; l *= lg; r *= lg; }
+            // limitador de seguridade (do núcleo): teito a −1 dBFS, ataque instantáneo, solta en 80 ms, sen anticipación
+            teito.procesar (l, r);
             l = softClip (l); r = softClip (r);
             L[i] = (float) l; R[i] = (float) r;
         }
@@ -152,8 +150,7 @@ private:
     Biquad out1, out2, eqH, eqL, eqM, eqT, spHp, spPk, spLp;
     double makeT = 1, makeS = 1, volT = 1, volS = 1, smooth = 0.001;
     double spPre = 1, spK = 1, spNorm = 1, spComp = 1;
-    static constexpr double CEIL = 0.891;   // −1 dBFS
-    double limEnv = 0, limRel = 0.999;
+    escoita::Teito teito;
     double env = 0, atk = 0, rel = 0;
 
     static double gainFor (double x)
