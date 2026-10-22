@@ -1,8 +1,8 @@
 #!/bin/bash
-# Compila e instala Barullo FM en un Mac (Apple Silicon o Intel).
-# Uso:  abre Terminal en esta carpeta y escribe   ./build_mac.sh
-# Deja: VST3 en ~/Library/Audio/Plug-Ins/VST3, AU en ~/Library/Audio/Plug-Ins/Components
-#       y la app independiente en ~/Applications.
+# Compila e instala Barullo FM nun Mac (Apple Silicon ou Intel).
+# Uso:  abre o Terminal neste cartafol e escribe   ./build_mac.sh
+# Deixa: VST3 en ~/Library/Audio/Plug-Ins/VST3, AU en ~/Library/Audio/Plug-Ins/Components
+#        e a app independente en ~/Applications.
 set -eo pipefail
 cd "$(dirname "$0")"
 
