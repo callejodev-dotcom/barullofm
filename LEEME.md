@@ -12,6 +12,10 @@ Instrumento VST3 / AU / app independiente con el chip FM de 2 operadores emulado
 - **Ecualizador "Altavoz"** (tu ajuste) o "Plano". Opcionalmente, **saturación de altavoz pequeño**.
 - **MIDI**: notas, pedal de sostén (CC64), "all notes off" (CC120/123) y **cambio de programa = número de sonido** (0–99). Los 100 sonidos también aparecen como programas en el DAW.
 
+## Novidades (versión 0.4.1)
+
+- **Aviso das versións novas**: unha vez ao día, pregúntase a GitHub cal é a última versión (sen mandar ningún dato) e, se hai unha nova, avísase á beira de ESCOITA. cunha ligazón ás descargas. Co clic dereito en ESCOITA. vese a versión que tes, ábrense as descargas e desactívase o aviso. En Linux, de momento, non avisa (JUCE vai sen curl).
+
 ## Novedades (versión 0.2)
 
 - **Sin aliasing.** La web pasa el chip de 55 930 Hz a la frecuencia del DAW con interpolación lineal. Eso dobla hacia abajo las imágenes de lo que el chip tiene entre 8 y 28 kHz. En sonidos brillantes (sitar, órganos, metales) ese ruido inarmónico queda solo 23–39 dB por debajo de la nota.
@@ -65,7 +69,7 @@ GitHub compila en sus propias máquinas. En cada subida comprueba que todo compi
 Para **publicar una versión**, sube una etiqueta:
 
 ```
-git tag v0.4.0 && git push origin v0.4.0
+git tag v0.4.1 && git push origin v0.4.1
 ```
 
 La página *Releases* del repositorio se llena sola con:
@@ -114,6 +118,7 @@ xattr -cr "Barullo FM.vst3" && codesign --force --deep -s - "Barullo FM.vst3"
 | `Source/Fx.h` | Filtro de salida, ecualizador (mismas fórmulas que el navegador), compensación, saturación y limitador sin anticipación |
 | `Source/VoiceData.h` | Los 100 sonidos, las 36 741 escrituras de las películas y las caídas, exportadas del emulador web por `tools/export_data.js` |
 | `Source/Plugin*.cpp` | El plugin JUCE y la interfaz |
+| `Source/Actualizacions.cpp` | O aviso das versións novas (unha pregunta ao día a GitHub, nun fío aparte) |
 | `packaging/` | Instaladores: `package_mac.sh` (.pkg universal), `windows.iss` (Inno Setup), `package_linux.sh` (.tar.gz) |
 | `tools/RenderTest.cpp` | Prueba sin interfaz: con bloques de 512 y de 37 muestras el resultado tiene que ser idéntico |
 

@@ -788,14 +788,57 @@ MainView::MainView (BarulloProcessor& p)
     escoita.setURL (juce::URL ("https://www.escoita.link"));
     escoita.setFont (juce::Font (juce::FontOptions (tf (1)).withHeight (17.0f).withKerningFactor (0.16f)), false, juce::Justification::centredRight);
     escoita.setColour (juce::HyperlinkButton::textColourId, col::print);
-    escoita.setTooltip (U ("Barullo FM é unha ferramenta de Escoita · escoita.link"));
+    escoita.setTooltip (U ("Barullo FM é unha ferramenta de Escoita · escoita.link (clic dereito: a versión e as descargas)"));
     escoita.setWantsKeyboardFocus (false);
     addAndMakeVisible (escoita);
+    escoita.onMenu = [this] { showEscoitaMenu(); };
+    updateBtn.onClick = [] { juce::URL (actualizacions::downloadsUrl()).launchInDefaultBrowser(); };
+    addChildComponent (updateBtn);
+    refreshUpdate();
 
     setSize (W, H);
     showPage (0);
     startTimerHz (30);
     timerCallback();
+}
+
+// o aviso da versión nova: aparece cando o fío das versións sabe dunha
+void MainView::refreshUpdate()
+{
+    const auto v = updates->newVersion();
+    if (v == updateBtn.version && updateBtn.isVisible() == v.isNotEmpty()) return;
+    updateBtn.version = v;
+    updateBtn.setTitle (U ("Hai unha versión nova: ") + v);
+    updateBtn.setTooltip (U ("Tes a ") + BARULLO_VERSION + U (". Abre a páxina de descargas para baixar a ") + v + ".");
+    updateBtn.setVisible (v.isNotEmpty());
+}
+
+void MainView::showEscoitaMenu()
+{
+    juce::PopupMenu m;
+    m.addSectionHeader (U ("Barullo FM ") + BARULLO_VERSION);
+    m.addItem (U ("Abrir escoita.link"), [] { juce::URL ("https://www.escoita.link").launchInDefaultBrowser(); });
+    m.addItem (U ("Descargas e versións"), [] { juce::URL (actualizacions::downloadsUrl()).launchInDefaultBrowser(); });
+    m.addSeparator();
+    m.addItem (U ("Avisar das versións novas"), true, updates->enabled(), [sp = juce::Component::SafePointer<MainView> (this)]
+    {
+        if (sp == nullptr) return;
+        sp->updates->setEnabled (! sp->updates->enabled());
+        sp->refreshUpdate();
+    });
+    m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&escoita));
+}
+
+void UpdateButton::paintButton (juce::Graphics& g, bool over, bool)
+{
+    auto r = getLocalBounds().toFloat();
+    const auto t = U ("VERSIÓN NOVA ") + version + U (" · DESCARGALA");
+    // un LED aceso á dereita e o texto impreso á súa esquerda
+    const float cx = r.getRight() - 7.0f, cy = r.getCentreY();
+    g.setColour (col::led.withAlpha (0.25f)); g.fillEllipse (cx - 7.0f, cy - 7.0f, 14.0f, 14.0f);
+    g.setColour (col::led); g.fillEllipse (cx - 3.5f, cy - 3.5f, 7.0f, 7.0f);
+    printed (g, t, r.withTrimmedRight (20.0f), 12.0f, over ? col::print : col::amber, juce::Justification::centredRight, 0.12f);
+    if (hasKeyboardFocus (false)) { g.setColour (col::amber); g.drawRoundedRectangle (r.reduced (1.0f), 4.0f, 1.2f); }
 }
 
 MainView::~MainView() { setLookAndFeel (nullptr); }
@@ -828,6 +871,7 @@ void MainView::step (int d) { selectVoice ((proc.currentVoice() + d + ym::NUM_VO
 
 void MainView::timerCallback()
 {
+    if (++updateTick >= 60) { updateTick = 0; refreshUpdate(); }
     const int v = proc.currentVoice();
     if (v != shownVoice)
     {
@@ -999,6 +1043,7 @@ void MainView::paint (juce::Graphics& g)
 void MainView::resized()
 {
     escoita.setBounds (getWidth() - 32 - 160, 22, 160, 30);
+    updateBtn.setBounds (getWidth() - 32 - 160 - 8 - 340, 22, 340, 30);
     auto r = getLocalBounds().reduced (32, 0);
     r.removeFromTop (64);
 

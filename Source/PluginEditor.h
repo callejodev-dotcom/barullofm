@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "PluginProcessor.h"
+#include "Actualizacions.h"
 
 namespace ui
 {
@@ -126,6 +127,23 @@ namespace ui
         int data = 0, mask = 0;
     };
 
+    // ESCOITA. (a ligazón á web); co clic dereito, un menú coa versión, as descargas e o aviso
+    // das versións novas
+    struct EscoitaLink : juce::HyperlinkButton
+    {
+        void mouseDown (const juce::MouseEvent& e) override { if (! e.mods.isPopupMenu()) juce::HyperlinkButton::mouseDown (e); else if (onMenu) onMenu(); }
+        void mouseUp (const juce::MouseEvent& e) override { if (! e.mods.isPopupMenu()) juce::HyperlinkButton::mouseUp (e); }
+        std::function<void()> onMenu;
+    };
+
+    // o aviso dunha versión nova, á esquerda de ESCOITA. (unha ligazón á páxina de descargas)
+    struct UpdateButton : juce::Button
+    {
+        UpdateButton() : juce::Button ("actualizar") {}
+        void paintButton (juce::Graphics&, bool over, bool down) override;
+        juce::String version;
+    };
+
     class MainView : public juce::Component, private juce::Timer
     {
     public:
@@ -150,7 +168,12 @@ namespace ui
         juce::TextButton prevBtn, nextBtn, tabSounds, tabEdit, tabChip;
         juce::OwnedArray<VoiceButton> voiceBtns;
         juce::TextButton filmsBtn, speakerBtn, unlimitedBtn, eqSpeaker, eqFlat;
-        juce::HyperlinkButton escoita;
+        EscoitaLink escoita;
+        UpdateButton updateBtn;
+        juce::SharedResourcePointer<actualizacions::Checker> updates;
+        int updateTick = 0;
+        void refreshUpdate();
+        void showEscoitaMenu();
         juce::Label volLabel, bendLabel, velLabel, eqLabel;
         juce::Slider volume { juce::Slider::LinearVertical, juce::Slider::TextBoxBelow };
         juce::Slider bend { juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };

@@ -2,6 +2,10 @@
 
 Unha ferramenta de [Escoita](https://www.escoita.link).
 
+## Novidades na 0.4.1
+
+- **Aviso das versións novas**: unha vez ao día, pregúntase a GitHub cal é a última versión (sen mandar ningún dato) e, se hai unha nova, avísase á beira de ESCOITA. cunha ligazón ás descargas. Co clic dereito en ESCOITA. vese a versión que tes, ábrense as descargas e desactívase o aviso. En Linux, de momento, non avisa (JUCE vai sen curl).
+
 ## Descargas
 
 | Sistema | Instalador | Á man |

@@ -124,6 +124,13 @@ int main (int argc, char** argv)
         std::printf ("estado guardado/recuperado: %s (%d bytes)\n", ok ? "OK" : "FALLO", (int) mb.getSize());
         if (! ok) return 2;
     }
+    {   // o aviso das versións novas compara os números, non o texto (0.10 vai despois de 0.9)
+        using actualizacions::isNewer;
+        const bool ok = isNewer ("v0.4.1", "0.4.0") && isNewer ("0.10.0", "0.9.9") && isNewer ("1.0", "0.9.9")
+                        && ! isNewer ("v0.4.0", "0.4.0") && ! isNewer ("0.3.9", "0.4.0") && ! isNewer ("", "0.4.0") && ! isNewer ("lixo", "0.4.0");
+        std::printf ("versións novas: comparación dos números: %s\n", ok ? "OK" : "FALLO");
+        if (! ok) return 2;
+    }
     const double sr = 48000, seconds = 36;
     double c1 = 0, c2 = 0;
     auto a = run (512, sr, seconds, &c1);
