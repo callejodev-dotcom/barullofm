@@ -226,9 +226,9 @@ bool BarulloProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 void BarulloProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     scratch.assign ((size_t) juce::jmax (samplesPerBlock, 4096), 0.0f);
-    setLatencySamples (0);   // sin latencia: el chip se calcula muestra a muestra, sin anticipación
     synth.prepare (sampleRate);
     fx.prepare (sampleRate);
+    setLatencySamples (fx.latencia());   // o chip calcúlase mostra a mostra; só o teito mira 1,5 ms por diante
     lastEq = lastSpeaker = -1; lastVolume = -1000.0f;
     syncParams();
     fx.reset();

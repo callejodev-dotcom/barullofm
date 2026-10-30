@@ -240,6 +240,13 @@ int main (int argc, char** argv)
         std::printf ("pegada da saída: %016llx\n", (unsigned long long) h);
     }
     std::printf ("pegada do roubo (acordes de doce notas co pedal): %016llx\n", (unsigned long long) pegadaDoRoubo());
+    {   // o teito con anticipación: a latencia declarada é a súa (1,5 ms) e o pico nunca pasa de −1 dBFS
+        BarulloProcessor p;
+        p.prepareToPlay (sr, 512);
+        const bool ok = p.getLatencySamples() == 72 && peak <= 0.8913f;
+        std::printf ("teito: latencia %d mostras e pico %.4f: %s\n", p.getLatencySamples(), peak, ok ? "OK" : "FALLO");
+        if (! ok) return 2;
+    }
 
     const juce::File f (argc > 1 ? juce::String (argv[1]) : juce::File::getCurrentWorkingDirectory().getChildFile ("barullo_test.wav").getFullPathName());
     f.deleteFile();

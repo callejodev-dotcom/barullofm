@@ -1,6 +1,6 @@
 # Barullo FM
 
-Instrumento VST3 / AU / app independente co chip FM de 2 operadores emulado rexistro a rexistro, tal como o calibramos coa gravación do chip real. Non usa mostras gravadas: o chip calcúlase mostra a mostra, así que **non ten latencia** (latencia declarada ao DAW: 0).
+Instrumento VST3 / AU / app independente co chip FM de 2 operadores emulado rexistro a rexistro, tal como o calibramos coa gravación do chip real. Non usa mostras gravadas: o chip calcúlase mostra a mostra. A única latencia é a do limitador de seguridade, que mira 1,5 ms por diante para baixar suave antes dos picos (o DAW compénsaa só).
 
 ## Que fai igual ca o teclado
 
@@ -123,7 +123,7 @@ xattr -cr "Barullo FM.vst3" && codesign --force --deep -s - "Barullo FM.vst3"
 | `Source/Chip.h` | O chip: fases de 19 bits, seno logarítmico + táboa exponencial, envolvente de 9 bits, realimentación, media onda; corre a reloxo/64 |
 | `Source/Resampler.h` | Paso á frecuencia do DAW sen aliasing (filtro de fase mínima, deséñase ao arrancar) |
 | `Source/Synth.h` | O «firmware»: reparto de canles, carga de sons, películas, caída ao soltar, pedal (o pedal e a escolla da canle, do núcleo común) |
-| `Source/Fx.h` | Filtro de saída, ecualizador (as mesmas fórmulas ca o navegador), compensación, saturación e limitador sen anticipación (o teito a −1 dBFS, do núcleo común) |
+| `Source/Fx.h` | Filtro de saída, ecualizador (as mesmas fórmulas ca o navegador), compensación, saturación e limitador sen anticipación e, ao final, o teito a −1 dBFS do núcleo común, con 1,5 ms de anticipación |
 | `Source/VoiceData.h` | Os 100 sons, as 36 741 escrituras das películas e as caídas, exportadas do emulador web por `tools/export_data.js` |
 | `Source/Plugin*.cpp` | O plugin JUCE e a interface |
 | `packaging/` | Os datos do produto (`produto.env`), os LEEME dos instaladores e as notas da versión; os instaladores e a CI son do núcleo común, [escoita-nucleo](https://github.com/callejodev-dotcom/escoita-nucleo) (versión fixada en `CMakeLists.txt`, `ESCOITA_NUCLEO_VERSION`, e en `.github/workflows/build.yml`) |

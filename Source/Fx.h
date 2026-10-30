@@ -70,7 +70,9 @@ public:
     double volumeDb   = 0;
     Eq     eq;
 
-    void prepare (double sampleRate) { fs = sampleRate; teito.preparar (fs, 0.080); update(); reset(); }
+    // o teito mira 1,5 ms por diante: a saída vai atrasada iso (latencia(), que se declara ao DAW)
+    void prepare (double sampleRate) { fs = sampleRate; teito.preparar (fs, 0.080, 0.891, 0.0015); update(); reset(); }
+    int latencia() const { return teito.latencia(); }
 
     void reset()
     {
@@ -137,7 +139,7 @@ public:
             env = pk + (env - pk) * coef;
             const double g = gainFor (env) * MAKEUP;
             l *= g; r *= g;
-            // limitador de seguridade (do núcleo): teito a −1 dBFS, ataque instantáneo, solta en 80 ms, sen anticipación
+            // limitador de seguridade (do núcleo): teito a −1 dBFS, 1,5 ms de anticipación (baixa suave, sen distorsión), solta en 80 ms
             teito.procesar (l, r);
             l = softClip (l); r = softClip (r);
             L[i] = (float) l; R[i] = (float) r;
