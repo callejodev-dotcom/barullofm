@@ -2,6 +2,12 @@
 
 Unha ferramenta de [Escoita](https://www.escoita.link).
 
+## Novidades na 0.5.1
+
+- **Limitador de seguridade novo**: mira 1,5 ms por diante e baixa suave antes do pico, en vez de achatalo. Aínda que o son vaia moi forte, xa non soa a clip. O DAW compensa só eses 1,5 ms (a latencia que declara o plugin).
+- Tocando en directo, son 1,5 ms máis (non se nota).
+- O aviso das versións novas funciona tamén en Linux.
+
 ## Novidades na 0.5.0
 
 - **Presets propios**: garda todo o que tes (o son, os sons editados e os axustes) cun nome e volve a el cando queiras (botón PRESETS; os ficheiros van en Documentos/Barullo FM/Presets).
